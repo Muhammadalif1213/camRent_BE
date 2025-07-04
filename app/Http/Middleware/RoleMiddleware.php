@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Illuminate\Support\Facades\Auth;
 
 class RoleMiddleware
 {
@@ -18,7 +19,7 @@ class RoleMiddleware
 
         $user = Auth::guard('api')->user();
 
-        if (!$user || !$user->role || $user->role->name !== $role) {
+        if (!$user || !$user->role || $user->role->name !== $requiredRole) {
             return response()->json([
                 'message' => 'Unauthorized in ' . $role,
                 'status_code' => 403,
