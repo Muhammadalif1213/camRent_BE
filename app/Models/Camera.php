@@ -19,7 +19,12 @@ class Camera extends Model
         'brand',
         'description',
         'rental_price_per_day',
-        'image_url',
+        'foto_camera',
         'status',
     ];
+    // Relasi: Satu kamera bisa dimiliki oleh banyak rental
+    public function rentals()
+    {
+        return $this->belongsToMany(Rental::class, 'camera_rental');
+    }
 }

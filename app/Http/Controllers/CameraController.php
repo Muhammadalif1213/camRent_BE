@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use App\Models\Camera;
 use Illuminate\Support\Facades\Validator;
 
+use App\Http\Requests\AddCameraRequest;
+
 class CameraController extends Controller
 {
     /**
@@ -34,41 +36,45 @@ class CameraController extends Controller
     }
 
     /**
-     * Menyimpan data kamera baru ke database.
-     *
-     * @bodyParam name string required Nama kamera. Example: Sony A7 III
-     * @bodyParam brand string required Merek kamera. Example: Sony
-     * @bodyParam description string required Deskripsi dan spesifikasi.
-     * @bodyParam rental_price_per_day number required Harga sewa per hari. Example: 250000
-     * @bodyParam image_url string required URL gambar kamera.
+     * Menyimpan data kamera baru.
      */
-    public function store(Request $request)
+    public function store(AddCameraRequest $request)
     {
-        // Validasi input dari request
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'brand' => 'required|string|max:100',
-            'description' => 'required|string',
-            'rental_price_per_day' => 'required|numeric|min:0',
-            'image_url' => 'required|string|url', // Validasi sebagai URL
-        ]);
+        try {
+            $binaryImage = $request->hasFile('foto_camera')
+                ? $request->file('foto_camera')->get()
+                : null;
 
-        if ($validator->fails()) {
+            $camera = Camera::create([
+                'name' => $request->name,
+                'brand' => $request->brand,
+                'description' => $request->description,
+                'rental_price_per_day' => $request->rental_price_per_day,
+                'status' => $request->status,
+                'foto_camera' => $binaryImage,
+            ]);
+
             return response()->json([
-                'message' => 'Validasi gagal',
-                'errors' => $validator->errors()
-            ], 422);
+                'message' => 'Kamera berhasil ditambahkan',
+                'data' => [
+                    'id' => $camera->id,
+                    'name' => $camera->name,
+                    'brand' => $camera->brand,
+                    'description' => $camera->description,
+                    'rental_price_per_day' => $camera->rental_price_per_day,
+                    'status' => $camera->status,
+                    'foto_camera' => $binaryImage ? base64_encode($binaryImage) : null,
+                ]
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Gagal menyimpan data kamera.',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        // Buat dan simpan data kamera baru
-        $camera = Camera::create($validator->validated());
-
-        // Beri response sukses
-        return response()->json([
-            'message' => 'Data kamera berhasil ditambahkan',
-            'data' => $camera
-        ], 201); // 201 Created
     }
+
+
 
     /**
      * Memperbarui data kamera yang sudah ada.
@@ -79,14 +85,13 @@ class CameraController extends Controller
      */
     public function update(Request $request, Camera $camera)
     {
-        // Validasi input, sama seperti saat membuat data baru
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'brand' => 'required|string|max:100',
             'description' => 'required|string',
             'rental_price_per_day' => 'required|numeric|min:0',
-            'image_url' => 'required|string|url',
-            'status' => 'required|in:available,rented,maintenance', // Tambahkan validasi status
+            'status' => 'required|in:available,rented,maintenance',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048', // opsional update
         ]);
 
         if ($validator->fails()) {
@@ -96,15 +101,35 @@ class CameraController extends Controller
             ], 422);
         }
 
-        // Update data kamera dengan data yang tervalidasi
-        $camera->update($validator->validated());
+        // Konversi file gambar baru jika ada
+        if ($request->hasFile('image')) {
+            $binaryImage = file_get_contents($request->file('image'));
+            $camera->foto_camera = $binaryImage;
+        }
 
-        // Beri response sukses dengan data yang sudah diperbarui
+        $camera->update([
+            'name' => $request->name,
+            'brand' => $request->brand,
+            'description' => $request->description,
+            'rental_price_per_day' => $request->rental_price_per_day,
+            'status' => $request->status,
+            // foto_camera sudah diubah sebelumnya jika ada file baru
+        ]);
+
         return response()->json([
             'message' => 'Data kamera berhasil diperbarui',
-            'data' => $camera
-        ], 200); // 200 OK
+            'data' => [
+                'id' => $camera->id,
+                'name' => $camera->name,
+                'brand' => $camera->brand,
+                'description' => $camera->description,
+                'rental_price_per_day' => $camera->rental_price_per_day,
+                'status' => $camera->status,
+                'foto_camera_base64' => base64_encode($camera->foto_camera),
+            ]
+        ], 200);
     }
+
 
     /**
      * Menghapus data kamera dari database.

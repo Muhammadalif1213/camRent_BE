@@ -20,7 +20,7 @@ return new class extends Migration
             $table->string('image_url'); // Path atau URL ke gambar kamera
             $table->enum('status', ['available', 'rented', 'maintenance'])->default('available');
             $table->timestamps();
-        });
+        });  
     }
 
     /**
