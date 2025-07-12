@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('brand'); // Merek kamera (e.g., Canon, Sony)
             $table->text('description'); // Deskripsi dan spesifikasi
             $table->decimal('rental_price_per_day', 10, 2); // Harga sewa per hari
-            $table->string('image_url'); // Path atau URL ke gambar kamera
+            $table->binary('foto_camera')->nullable(); // Untuk menyimpan gambar sebagai binary
             $table->enum('status', ['available', 'rented', 'maintenance'])->default('available');
             $table->timestamps();
         });  
