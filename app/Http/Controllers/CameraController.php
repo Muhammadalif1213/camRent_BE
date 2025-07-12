@@ -83,38 +83,29 @@ class CameraController extends Controller
      * @param  \App\Models\Camera  $camera
      * @return \Illuminate\Http\JsonResponse
      */
-    public function update(Request $request, Camera $camera)
+    public function update(Request $request, $id)
     {
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'brand' => 'required|string|max:100',
-            'description' => 'required|string',
-            'rental_price_per_day' => 'required|numeric|min:0',
-            'status' => 'required|in:available,rented,maintenance',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048', // opsional update
-        ]);
-
-        if ($validator->fails()) {
+        $camera = Camera::find($id);
+        if (!$camera) {
             return response()->json([
-                'message' => 'Validasi gagal',
-                'errors' => $validator->errors()
-            ], 422);
+                'message' => 'Kamera tidak ditemukan',
+                'status_code' => 404,
+                'data' => null,
+            ]);
         }
 
-        // Konversi file gambar baru jika ada
-        if ($request->hasFile('image')) {
-            $binaryImage = file_get_contents($request->file('image'));
-            $camera->foto_camera = $binaryImage;
+        // Update jika ada inputan baru
+        $camera->name = $request->has('name') ? $request->name : $camera->name;
+        $camera->brand = $request->has('brand') ? $request->brand : $camera->brand;
+        $camera->description = $request->has('description') ? $request->description : $camera->description;
+        $camera->rental_price_per_day = $request->has('rental_price_per_day') ? $request->rental_price_per_day : $camera->rental_price_per_day;
+        $camera->status = $request->has('status') ? $request->status : $camera->status;
+
+        if ($request->hasFile('foto_camera')) {
+            $camera->foto_camera = file_get_contents($request->file('foto_camera'));
         }
 
-        $camera->update([
-            'name' => $request->name,
-            'brand' => $request->brand,
-            'description' => $request->description,
-            'rental_price_per_day' => $request->rental_price_per_day,
-            'status' => $request->status,
-            // foto_camera sudah diubah sebelumnya jika ada file baru
-        ]);
+        $camera->save();
 
         return response()->json([
             'message' => 'Data kamera berhasil diperbarui',
@@ -125,7 +116,7 @@ class CameraController extends Controller
                 'description' => $camera->description,
                 'rental_price_per_day' => $camera->rental_price_per_day,
                 'status' => $camera->status,
-                'foto_camera_base64' => base64_encode($camera->foto_camera),
+                'foto_camera' => base64_encode($camera->foto_camera),
             ]
         ], 200);
     }
