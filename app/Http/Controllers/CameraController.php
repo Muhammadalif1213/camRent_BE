@@ -51,7 +51,7 @@ class CameraController extends Controller
                 'description' => $request->description,
                 'rental_price_per_day' => $request->rental_price_per_day,
                 'status' => $request->status,
-                'foto_camera' => $binaryImage,
+                'foto_camera' => $binaryImage ? base64_encode($binaryImage) : null,
             ]);
 
             return response()->json([
@@ -63,7 +63,7 @@ class CameraController extends Controller
                     'description' => $camera->description,
                     'rental_price_per_day' => $camera->rental_price_per_day,
                     'status' => $camera->status,
-                    'foto_camera' => $binaryImage ? base64_encode($binaryImage) : null,
+                    'foto_camera' => $camera->foto_camera ? base64_encode($camera->foto_camera) : null,
                 ]
             ], 201);
         } catch (\Exception $e) {

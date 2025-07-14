@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Exception;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Camera;
@@ -10,6 +11,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\StoreBookingRequest;
 use App\Http\Requests\UpdateBookingStatusRequest;
+use App\Http\Requests\CompleteBookingDataRequest;
 use Illuminate\Support\Facades\DB;
 
 class BookingController extends Controller
@@ -70,6 +72,46 @@ class BookingController extends Controller
             DB::rollBack(); // Batalkan semua jika ada error
             // statusCode 409 (Conflict) lebih cocok untuk error ketersediaan barang
             return response()->json(['message' => $e->getMessage()], 409);
+        }
+    }
+
+    /**
+     * melengkapi data booking (lokasi & KTP).
+     */
+    public function completeData(CompleteBookingDataRequest $request, Booking $booking)
+    {
+        // 1. Pengecekan Keamanan: Pastikan user yang login adalah pemilik booking ini
+        if (Auth::id() !== $booking->user_id) {
+            return response()->json(['message' => 'Akses ditolak.'], 403);
+        }
+
+        // 2. Pengecekan Status: Pastikan hanya booking 'pending' yang bisa diisi
+        if ($booking->status !== 'pending') {
+            return response()->json(['message' => 'Data untuk booking ini sudah tidak bisa diubah.'], 409);
+        }
+
+        try {
+            $validatedData = $request->validated();
+            $idCardPath = $request->file('id_card_image')->store('id_cards', 'public');
+
+            // Hapus gambar KTP lama jika ada
+            if ($booking->id_card_image_path) {
+                Storage::disk('public')->delete($booking->id_card_image_path);
+            }
+
+            // Update booking dengan data baru
+            $booking->update([
+                'location'           => $validatedData['location'],
+                'id_card_image_path' => $idCardPath,
+            ]);
+
+            return response()->json([
+                'message' => 'Data jaminan berhasil dilengkapi. Menunggu persetujuan admin.',
+                'data' => $booking,
+            ], 200);
+
+        } catch (Exception $e) {
+            return $this->handleException($e);
         }
     }
 
@@ -160,9 +202,33 @@ class BookingController extends Controller
         }
     }
 
-    public function myBookings() {
-    $bookings = Booking::where('user_id', Auth::id())->where('status', 'pending')->with('cameras')->latest()->get();
-    return response()->json(['data' => $bookings]);
-}
+    /**
+     * Mengambil riwayat booking hanya untuk pengguna yang sedang login.
+     */
+    public function myBookings()
+    {
+        try {
+            // Mengambil ID dari pengguna yang terotentikasi melalui token
+            $userId = Auth::id();
 
+            // Mengambil semua booking milik user tersebut,
+            // beserta data kamera terkait, diurutkan dari yang terbaru.
+            $bookings = Booking::where('user_id', $userId)
+                                ->with('cameras')
+                                ->latest()
+                                ->get();
+
+            return response()->json([
+                'message' => 'Riwayat booking berhasil diambil',
+                'status_code' => 200,
+                'data' => $bookings
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Gagal mengambil riwayat booking.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

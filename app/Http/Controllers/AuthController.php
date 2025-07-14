@@ -168,7 +168,7 @@ class AuthController extends Controller
             return response()->json([
                 'message' => 'User ditemukan',
                 'status_code' => 200,
-                'data' => $formatedUser
+                'user' => $formatedUser
             ], 200);
         } catch (Exception $e) {
             return response()->json([
