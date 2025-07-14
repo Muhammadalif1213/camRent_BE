@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class AddCameraRequest extends FormRequest
+class CompleteBookingDataRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -22,12 +22,8 @@ class AddCameraRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => 'required|string|max:255',
-            'brand' => 'required|string|max:255',
-            'description' => 'required|string|max:1000',
-            'rental_price_per_day' => 'required|numeric|min:0',
-            'foto_camera' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:5120', // Maksimal 2MB
-            'status' => 'required|in:available,rented,maintenance',
+            'location'        => 'required|string|min:10',
+            'id_card_image'   => 'required|image|mimes:jpeg,png,jpg|max:2048',
         ];
     }
 }
