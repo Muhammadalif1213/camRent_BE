@@ -21,9 +21,11 @@ class Booking extends Model
         'end_date',
         'total_price',
         'status',
-        'payment_status',
-        'payment_proof_path',
         'admin_notes',
+        'payment_status',
+        //baru
+        'location',
+        'id_card_image_path',
     ];
 
     /**
@@ -55,5 +57,13 @@ class Booking extends Model
                     // Anda bisa menambahkan kolom dari pivot table jika perlu
                     ->withPivot('quantity', 'price_at_booking')
                     ->withTimestamps();
+    }
+
+    public function payments() {
+        return $this->hasMany(Payment::class);
+    }
+
+    public function rentalConditions() {
+        return $this->hasMany(RentalCondition::class);
     }
 }
